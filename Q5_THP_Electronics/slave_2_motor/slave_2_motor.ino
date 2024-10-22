@@ -1,46 +1,35 @@
 #include <Wire.h>
-// Define distance variable
-int cm=0;
-// Defines byte to send
-int signal=0;
-
-// Define function to calculate distance of object
-long distance(int trig, int echo){
-  pinMode(trig, OUTPUT);  
-  digitalWrite(trig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trig, LOW);
-  pinMode(echo, INPUT);
-  return pulseIn(echo, HIGH);
-}
-
-// Handler function for onRequest()
-void stopMotor(){
-  Wire.write(signal);
-  Serial.print("Byte sent: ");
-  Serial.println(signal);
+// Condition variable for not letting code for turning on 
+// the motor execute if motor is stopped
+int cond=1;
+// Handler function for onRecieve()
+void stop(int nBytes){
+  if (Wire.available()){
+    digitalWrite(2,LOW);
+    Serial.println("Motor stopped");
+    // Used to consume the byte received so 
+    // available bytes go to zero
+    int c=Wire.read();
+    cond=0;
+    delay(100);	
+  }
 }
 
 void setup(){
   Serial.begin(9600);
-  Wire.begin(7);
+  Wire.begin(8);
+  pinMode(2,OUTPUT);
 }
 
 void loop(){
-  // Calculate distance from speed of sound
-  cm = 0.01723*distance(7,6);
-  Serial.print(cm);
-  Serial.println("cm");
-  // Send correct byte when object is near
-  if (cm<=15){
-    signal=1;
-    Wire.onRequest(stopMotor);
+  Wire.onReceive(stop);
+  // Turns on motor if signal is not received
+  if (cond){
+  	digitalWrite(2,HIGH);
+  	Serial.println("Motor working");
   }
-  // Send byte to be ignored by master when no objct is near
-  else{
-    signal=0;
-  }
+  // Default value of condition variable
+  cond=1;
   delay(100);
 }
+
